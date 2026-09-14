@@ -1,0 +1,1688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Sokoban 3D — PHC 2026</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #07090f;
+      color: #e8eef7;
+      font-family: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background:
+        radial-gradient(1100px 700px at 12% -10%, rgba(56, 189, 248, 0.16), transparent 60%),
+        radial-gradient(900px 700px at 108% 12%, rgba(167, 139, 250, 0.16), transparent 55%),
+        radial-gradient(1000px 800px at 50% 120%, rgba(52, 211, 153, 0.12), transparent 58%),
+        #07090f;
+      overflow: hidden;
+    }
+
+    .bg::before,
+    .bg::after {
+      content: "";
+      position: absolute;
+      width: 42vw;
+      height: 42vw;
+      border-radius: 50%;
+      filter: blur(90px);
+      opacity: 0.22;
+    }
+
+    .bg::before {
+      left: -12vw;
+      top: -12vh;
+      background: radial-gradient(circle, #38bdf8, transparent 70%);
+      animation: floatA 18s ease-in-out infinite alternate;
+    }
+
+    .bg::after {
+      right: -12vw;
+      bottom: -12vh;
+      background: radial-gradient(circle, #a78bfa, transparent 70%);
+      animation: floatB 22s ease-in-out infinite alternate;
+    }
+
+    @keyframes floatA {
+      to {
+        transform: translate(8vw, 6vh) scale(1.08);
+      }
+    }
+
+    @keyframes floatB {
+      to {
+        transform: translate(-7vw, -9vh) scale(1.12);
+      }
+    }
+
+    canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      display: block;
+      touch-action: none;
+    }
+
+    .glass {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.04));
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+    }
+
+    #topbar {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      z-index: 2;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: stretch;
+      pointer-events: none;
+    }
+
+    #topbar > * {
+      pointer-events: auto;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      border-radius: 16px;
+      font-family: "Space Grotesk", sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: 0.2px;
+    }
+
+    .logo .orb {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: conic-gradient(from 90deg, #67e8f9, #a78bfa, #34d399, #67e8f9);
+      box-shadow: 0 0 16px rgba(103, 232, 249, 0.75);
+    }
+
+    .badge {
+      margin-left: 2px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.9px;
+      color: #dbeafe;
+      background: linear-gradient(90deg, rgba(34, 211, 238, 0.22), rgba(167, 139, 250, 0.22));
+      border: 1px solid rgba(255, 255, 255, 0.16);
+    }
+
+    .progress {
+      flex: 1;
+      min-width: 250px;
+      padding: 11px 14px;
+      border-radius: 16px;
+    }
+
+    .progress-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: #b8c4d4;
+      margin-bottom: 8px;
+    }
+
+    .progress-top strong {
+      font-size: 14px;
+      color: white;
+      font-weight: 800;
+    }
+
+    .bar {
+      height: 8px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.09);
+    }
+
+    #progress-fill {
+      height: 100%;
+      width: 2%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #22d3ee, #a78bfa, #34d399);
+      transition: width 0.35s ease;
+      box-shadow: 0 0 18px rgba(34, 211, 238, 0.35);
+    }
+
+    .stats {
+      display: flex;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 16px;
+    }
+
+    .stat {
+      min-width: 86px;
+      padding: 9px 11px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+    }
+
+    .stat span {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #93a1b5;
+    }
+
+    .stat strong {
+      font-size: 16px;
+      color: white;
+      font-weight: 800;
+    }
+
+    #controls {
+      position: fixed;
+      left: 14px;
+      bottom: 14px;
+      z-index: 2;
+      padding: 10px 12px;
+      border-radius: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 14px;
+      font-size: 13px;
+      color: #b8c4d4;
+    }
+
+    .key {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 22px;
+      margin-right: 3px;
+      padding: 0 6px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    #dpad {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: repeat(3, 54px);
+      grid-template-rows: repeat(3, 54px);
+      gap: 8px;
+    }
+
+    #dpad button {
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05));
+      color: #eaf2ff;
+      font-size: 22px;
+      cursor: pointer;
+      box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
+      transition: transform 0.1s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+      touch-action: none;
+    }
+
+    #dpad button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(34, 211, 238, 0.55);
+      box-shadow: 0 12px 26px rgba(34, 211, 238, 0.16);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.07));
+    }
+
+    #dpad button:active {
+      transform: scale(0.94);
+    }
+
+    #dpad .up {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    #dpad .left {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    #dpad .right {
+      grid-column: 3;
+      grid-row: 2;
+    }
+
+    #dpad .down {
+      grid-column: 2;
+      grid-row: 3;
+    }
+
+    #toast {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%) translateY(8px);
+      z-index: 2;
+      padding: 9px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #eaf2ff;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    #flash {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0;
+      background: radial-gradient(circle at 50% 55%, rgba(52, 211, 153, 0.42), rgba(34, 211, 238, 0.16) 35%, transparent 65%);
+    }
+
+    #flash.on {
+      animation: flash 0.7s ease-out;
+    }
+
+    @keyframes flash {
+      0% {
+        opacity: 0;
+      }
+      25% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+      }
+    }
+
+    #overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 50% 45%, rgba(34, 211, 238, 0.12), rgba(3, 6, 12, 0.62));
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    #overlay[hidden] {
+      display: none;
+    }
+
+    #overlay-card {
+      width: min(430px, calc(100vw - 36px));
+      padding: 26px 24px;
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(15, 20, 32, 0.92), rgba(8, 11, 18, 0.88));
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55);
+      text-align: center;
+      animation: cardIn 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.25);
+    }
+
+    @keyframes cardIn {
+      from {
+        transform: translateY(16px) scale(0.96);
+        opacity: 0;
+      }
+
+      to {
+        transform: none;
+        opacity: 1;
+      }
+    }
+
+    #overlay-card h2 {
+      margin: 0 0 6px;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 30px;
+      line-height: 1.1;
+      background: linear-gradient(90deg, #67e8f9, #a78bfa, #34d399);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    #overlay-sub {
+      margin: 0 0 18px;
+      color: #b8c4d4;
+      font-size: 14px;
+    }
+
+    .overlay-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .overlay-stats div {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 10px;
+    }
+
+    .overlay-stats span {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #93a1b5;
+    }
+
+    .overlay-stats strong {
+      font-size: 20px;
+      color: white;
+      font-weight: 800;
+    }
+
+    .btn {
+      margin: 0 6px;
+      padding: 11px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.12s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255, 255, 255, 0.32);
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn.primary {
+      background: linear-gradient(90deg, #06b6d4, #8b5cf6);
+      border-color: transparent;
+      box-shadow: 0 12px 26px rgba(6, 182, 212, 0.24);
+    }
+
+    .btn.primary:hover {
+      box-shadow: 0 16px 32px rgba(6, 182, 212, 0.3);
+    }
+
+    @media (max-width: 900px) {
+      .progress {
+        order: 3;
+        flex: 1 1 100%;
+      }
+    }
+
+    @media (max-width: 640px) {
+      #controls {
+        display: none;
+      }
+
+      #dpad {
+        grid-template-columns: repeat(3, 48px);
+        grid-template-rows: repeat(3, 48px);
+      }
+
+      #dpad button {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg" aria-hidden="true"></div>
+
+  <header id="topbar">
+    <div class="logo glass">
+      <span class="orb"></span>
+      <span>Sokoban 3D</span>
+      <span class="badge">PHC 2026</span>
+    </div>
+
+    <div class="progress glass">
+      <div class="progress-top">
+        <span>Progress</span>
+        <strong id="level-info">1/50</strong>
+      </div>
+      <div class="bar">
+        <div id="progress-fill"></div>
+      </div>
+    </div>
+
+    <div class="stats glass">
+      <div class="stat">
+        <span>Moves</span>
+        <strong id="status-moves">0</strong>
+      </div>
+      <div class="stat">
+        <span>Boxes</span>
+        <strong id="status-boxes">0</strong>
+      </div>
+      <div class="stat">
+        <span>Best</span>
+        <strong id="status-best">—</strong>
+      </div>
+    </div>
+  </header>
+
+  <div id="controls" class="glass">
+    <span>
+      <span class="key">W</span>
+      <span class="key">A</span>
+      <span class="key">S</span>
+      <span class="key">D</span>
+    </span>
+    <span>Swipe / D-Pad</span>
+    <span><span class="key">R</span> Restart</span>
+    <span><span class="key">[</span><span class="key">]</span> Level</span>
+  </div>
+
+  <div id="dpad" aria-label="Movement pad">
+    <button class="up" data-dir="0,-1" aria-label="Move up">↑</button>
+    <button class="left" data-dir="-1,0" aria-label="Move left">←</button>
+    <button class="right" data-dir="1,0" aria-label="Move right">→</button>
+    <button class="down" data-dir="0,1" aria-label="Move down">↓</button>
+  </div>
+
+  <div id="toast" class="glass"></div>
+  <div id="flash"></div>
+
+  <div id="overlay" hidden>
+    <div id="overlay-card">
+      <h2 id="overlay-title">Level Complete!</h2>
+      <p id="overlay-sub"></p>
+
+      <div class="overlay-stats">
+        <div>
+          <span>Moves</span>
+          <strong id="overlay-moves">0</strong>
+        </div>
+        <div>
+          <span>Best</span>
+          <strong id="overlay-best">—</strong>
+        </div>
+        <div>
+          <span>Crates</span>
+          <strong id="overlay-crates">0</strong>
+        </div>
+      </div>
+
+      <button id="btn-restart" class="btn">Restart</button>
+      <button id="btn-next" class="btn primary">Next Level</button>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <script>
+    // =====================================================================
+    // Level definitions
+    //
+    // # = wall
+    // . = target
+    // @ = player
+    // $ = crate
+    // + = player on target
+    // * = crate on target
+    // =====================================================================
+
+    const BASE_LEVELS = [
+      [
+        "#####",
+        "#@$.#",
+        "#####"
+      ],
+      [
+        "######",
+        "#    #",
+        "# $ .#",
+        "# @  #",
+        "######"
+      ],
+      [
+        "######",
+        "#  ..#",
+        "# $$ #",
+        "# @  #",
+        "######"
+      ],
+      [
+        "#######",
+        "#     #",
+        "# $ $ #",
+        "#  @  #",
+        "# ..  #",
+        "#######"
+      ],
+      [
+        "#######",
+        "#     #",
+        "# $$$ #",
+        "# ... #",
+        "#  @  #",
+        "#######"
+      ]
+    ];
+
+    function centeredRange(start, end, center) {
+      if (start > end) return [];
+
+      const values = [];
+      for (let i = start; i <= end; i++) values.push(i);
+
+      values.sort((a, b) => {
+        const da = Math.abs(a - center);
+        const db = Math.abs(b - center);
+
+        if (da !== db) return da - db;
+        return a - b;
+      });
+
+      return values;
+    }
+
+    function generateNewLevels(count) {
+      const levels = [];
+
+      for (let k = 1; k <= count; k++) {
+        // Push distance increases in stages.
+        // 1-10: 1 cell
+        // 11-20: 2 cells
+        // 21-30: 3 cells
+        // 31-45: 4 cells
+        const L = 1 + Math.min(3, Math.floor((k - 1) / 10));
+
+        const minDim = 5 + 2 * L;
+
+        // Board size grows from 7x7 to 21x15.
+        const W = Math.max(minDim, 7 + Math.min(14, Math.floor((k * 14) / count)));
+        const H = Math.max(minDim, 7 + Math.min(8, Math.floor((k * 8) / count)));
+
+        const inset = 2 + L;
+        const endX = W - 1 - inset;
+        const endZ = H - 1 - inset;
+
+        const cx = Math.floor(W / 2);
+        const cz = Math.floor(H / 2);
+
+        const topXs = centeredRange(inset, endX, cx);
+        const bottomXs = centeredRange(inset, endX, cx);
+        const leftZs = centeredRange(inset, endZ, cz);
+        const rightZs = centeredRange(inset, endZ, cz);
+
+        const candidates = [
+          topXs.map(x => ({ side: "top", x, z: 1 + L })),
+          bottomXs.map(x => ({ side: "bottom", x, z: H - 2 - L })),
+          leftZs.map(z => ({ side: "left", x: 1 + L, z })),
+          rightZs.map(z => ({ side: "right", x: W - 2 - L, z }))
+        ];
+
+        const totalCandidates = candidates.reduce((sum, arr) => sum + arr.length, 0);
+
+        let crateCount = 3 + Math.floor(k / 2);
+        crateCount = Math.min(Math.max(1, crateCount), totalCandidates);
+
+        const chosen = [];
+        const idx = [0, 0, 0, 0];
+
+        while (chosen.length < crateCount) {
+          let added = false;
+
+          for (let side = 0; side < 4; side++) {
+            if (chosen.length >= crateCount) break;
+
+            if (idx[side] < candidates[side].length) {
+              chosen.push(candidates[side][idx[side]++]);
+              added = true;
+            }
+          }
+
+          if (!added) break;
+        }
+
+        const grid = Array.from({ length: H }, () => Array(W).fill("#"));
+
+        // Central playable room.
+        for (let z = inset; z <= endZ; z++) {
+          for (let x = inset; x <= endX; x++) {
+            grid[z][x] = " ";
+          }
+        }
+
+        // Create lane cells for each crate/target pair.
+        chosen.forEach(c => {
+          if (c.side === "top") {
+            for (let z = 1; z <= 1 + L; z++) {
+              grid[z][c.x] = " ";
+            }
+          } else if (c.side === "bottom") {
+            for (let z = H - 2 - L; z <= H - 2; z++) {
+              grid[z][c.x] = " ";
+            }
+          } else if (c.side === "left") {
+            for (let x = 1; x <= 1 + L; x++) {
+              grid[c.z][x] = " ";
+            }
+          } else if (c.side === "right") {
+            for (let x = W - 2 - L; x <= W - 2; x++) {
+              grid[c.z][x] = " ";
+            }
+          }
+        });
+
+        // Add interior obstacle walls for later levels.
+        // Obstacles are only placed inside the central room,
+        // while leaving the outer central ring open for movement.
+        const desiredObstacles = Math.min(24, Math.floor(k / 2));
+        let placedObstacles = 0;
+
+        for (let z = inset + 1; z <= endZ - 1 && placedObstacles < desiredObstacles; z += 2) {
+          for (let x = inset + 1; x <= endX - 1 && placedObstacles < desiredObstacles; x += 2) {
+            if ((x + z) % 2 !== 0) continue;
+            if (x === cx && z === cz) continue;
+
+            if (grid[z][x] === " ") {
+              grid[z][x] = "#";
+              placedObstacles++;
+            }
+          }
+        }
+
+        // Place targets and crates.
+        chosen.forEach(c => {
+          let target;
+
+          if (c.side === "top") {
+            target = { x: c.x, z: 1 };
+          } else if (c.side === "bottom") {
+            target = { x: c.x, z: H - 2 };
+          } else if (c.side === "left") {
+            target = { x: 1, z: c.z };
+          } else {
+            target = { x: W - 2, z: c.z };
+          }
+
+          grid[target.z][target.x] = ".";
+          grid[c.z][c.x] = "$";
+        });
+
+        grid[cz][cx] = "@";
+
+        levels.push(grid.map(row => row.join("")));
+      }
+
+      return levels;
+    }
+
+    const LEVELS = BASE_LEVELS.concat(generateNewLevels(45));
+
+    // =====================================================================
+    // DOM references
+    // =====================================================================
+
+    const levelInfo = document.getElementById("level-info");
+    const progressFill = document.getElementById("progress-fill");
+    const statusMoves = document.getElementById("status-moves");
+    const statusBoxes = document.getElementById("status-boxes");
+    const statusBest = document.getElementById("status-best");
+
+    const overlay = document.getElementById("overlay");
+    const overlayTitle = document.getElementById("overlay-title");
+    const overlaySub = document.getElementById("overlay-sub");
+    const overlayMoves = document.getElementById("overlay-moves");
+    const overlayBest = document.getElementById("overlay-best");
+    const overlayCrates = document.getElementById("overlay-crates");
+
+    const btnRestart = document.getElementById("btn-restart");
+    const btnNext = document.getElementById("btn-next");
+
+    const toastEl = document.getElementById("toast");
+    const flashEl = document.getElementById("flash");
+
+    // =====================================================================
+    // Movement definitions
+    // =====================================================================
+
+    const DIRS = {
+      KeyW: { x: 0, z: -1 },
+      ArrowUp: { x: 0, z: -1 },
+
+      KeyS: { x: 0, z: 1 },
+      ArrowDown: { x: 0, z: 1 },
+
+      KeyA: { x: -1, z: 0 },
+      ArrowLeft: { x: -1, z: 0 },
+
+      KeyD: { x: 1, z: 0 },
+      ArrowRight: { x: 1, z: 0 }
+    };
+
+    const heldDirs = [];
+
+    // =====================================================================
+    // Game state
+    // =====================================================================
+
+    let scene, camera, renderer, directional;
+
+    let levelGroup = null;
+    let playerMesh = null;
+
+    let playerPos = { x: 0, z: 0 };
+
+    let wallSet = new Set();
+    let targetSet = new Set();
+    let crateMap = new Map();
+
+    let crates = [];
+    let targetMeshes = [];
+
+    let levelIndex = 0;
+    let moves = 0;
+    let won = false;
+
+    let gridRows = 0;
+    let gridCols = 0;
+
+    let animatingCount = 0;
+    let movementCooldown = 0;
+    let levelGeneration = 0;
+
+    let particles = [];
+
+    let winTimeout = null;
+    let toastTimer = null;
+
+    let mouseNX = 0;
+    let mouseNY = 0;
+
+    const cameraBase = new THREE.Vector3();
+    const cameraLookAt = new THREE.Vector3();
+
+    const clock = new THREE.Clock();
+
+    const ANIM_DURATION = 0.14;
+    const MOVE_COOLDOWN = 0.13;
+    const MIN_SWIPE = 24;
+
+    const PARTICLE_COLORS = [
+      new THREE.Color(0x67e8f9),
+      new THREE.Color(0x34d399),
+      new THREE.Color(0xfbbf24),
+      new THREE.Color(0xc4b5fd)
+    ];
+
+    // =====================================================================
+    // Helpers
+    // =====================================================================
+
+    function key(x, z) {
+      return x + "," + z;
+    }
+
+    function isAnimating() {
+      return animatingCount > 0;
+    }
+
+    function isWall(x, z) {
+      return wallSet.has(key(x, z));
+    }
+
+    function getBest(level) {
+      try {
+        const value = localStorage.getItem(`sokoban-phc-2026-best-${level}`);
+        return value ? Number(value) : null;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    function setBest(level, value) {
+      try {
+        localStorage.setItem(`sokoban-phc-2026-best-${level}`, String(value));
+      } catch (err) {
+        // Ignore storage errors.
+      }
+    }
+
+    function showToast(message) {
+      toastEl.textContent = message;
+      toastEl.classList.add("show");
+
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toastEl.classList.remove("show");
+      }, 1400);
+    }
+
+    function flashNow() {
+      flashEl.classList.remove("on");
+      void flashEl.offsetWidth;
+      flashEl.classList.add("on");
+    }
+
+    // =====================================================================
+    // Three.js setup
+    // =====================================================================
+
+    function initThree() {
+      scene = new THREE.Scene();
+      scene.fog = new THREE.Fog(0x070a12, 28, 75);
+
+      camera = new THREE.PerspectiveCamera(
+        50,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        200
+      );
+
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true
+      });
+
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setClearColor(0x000000, 0);
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      document.body.appendChild(renderer.domElement);
+
+      const ambient = new THREE.AmbientLight(0xffffff, 0.52);
+      scene.add(ambient);
+
+      directional = new THREE.DirectionalLight(0xffffff, 0.9);
+      directional.position.set(6, 12, 8);
+      directional.castShadow = true;
+
+      directional.shadow.mapSize.set(1024, 1024);
+      directional.shadow.camera.near = 0.5;
+      directional.shadow.camera.far = 60;
+      directional.shadow.camera.left = -18;
+      directional.shadow.camera.right = 18;
+      directional.shadow.camera.top = 18;
+      directional.shadow.camera.bottom = -18;
+      directional.shadow.bias = -0.0005;
+
+      scene.add(directional);
+      scene.add(directional.target);
+
+      const rimLight = new THREE.DirectionalLight(0x67e8f9, 0.18);
+      rimLight.position.set(-6, 5, -8);
+      scene.add(rimLight);
+
+      window.addEventListener("resize", onResize);
+
+      window.addEventListener("pointermove", e => {
+        mouseNX = (e.clientX / window.innerWidth) * 2 - 1;
+        mouseNY = (e.clientY / window.innerHeight) * 2 - 1;
+      });
+    }
+
+    function onResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // =====================================================================
+    // Level creation / cleanup
+    // =====================================================================
+
+    function clearLevel() {
+      if (!levelGroup) return;
+
+      levelGroup.traverse(obj => {
+        if (obj.geometry) {
+          obj.geometry.dispose();
+        }
+
+        if (obj.material) {
+          if (Array.isArray(obj.material)) {
+            obj.material.forEach(material => material.dispose());
+          } else {
+            obj.material.dispose();
+          }
+        }
+      });
+
+      scene.remove(levelGroup);
+      levelGroup = null;
+    }
+
+    function clearParticles() {
+      particles.forEach(p => {
+        scene.remove(p.points);
+        p.geometry.dispose();
+        p.material.dispose();
+      });
+
+      particles.length = 0;
+    }
+
+    function loadLevel(index) {
+      levelIndex = index;
+      moves = 0;
+      won = false;
+      movementCooldown = 0;
+      levelGeneration++;
+
+      clearTimeout(winTimeout);
+      heldDirs.length = 0;
+
+      clearParticles();
+      clearLevel();
+
+      levelGroup = new THREE.Group();
+      scene.add(levelGroup);
+
+      wallSet.clear();
+      targetSet.clear();
+      crateMap.clear();
+
+      crates = [];
+      targetMeshes = [];
+
+      const data = LEVELS[index];
+
+      gridRows = data.length;
+      gridCols = Math.max(...data.map(row => row.length));
+
+      playerPos = { x: 0, z: 0 };
+
+      for (let z = 0; z < gridRows; z++) {
+        const row = data[z];
+
+        for (let x = 0; x < gridCols; x++) {
+          const ch = row[x] || " ";
+
+          if (ch === "#") {
+            addWall(x, z);
+          } else {
+            addFloor(x, z);
+          }
+
+          if (ch === "." || ch === "+") {
+            addTarget(x, z);
+          }
+
+          if (ch === "@" || ch === "+") {
+            playerPos = { x, z };
+          }
+
+          if (ch === "$" || ch === "*") {
+            addCrate(x, z);
+          }
+        }
+      }
+
+      playerMesh = createPlayer(playerPos);
+      levelGroup.add(playerMesh);
+
+      frameLevel();
+      updateCrateHighlights();
+      updateHUD();
+
+      showToast(`Level ${levelIndex + 1} Loaded`);
+    }
+
+    // =====================================================================
+    // Mesh factories
+    // =====================================================================
+
+    function addWall(x, z) {
+      const geometry = new THREE.BoxGeometry(1, 1, 1);
+      const material = new THREE.MeshStandardMaterial({
+        color: 0x3b82f6,
+        roughness: 0.32,
+        metalness: 0.12,
+        emissive: 0x0ea5e9,
+        emissiveIntensity: 0.12
+      });
+
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x, 0.5, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+
+      levelGroup.add(mesh);
+      wallSet.add(key(x, z));
+    }
+
+    function addFloor(x, z) {
+      const geometry = new THREE.PlaneGeometry(0.98, 0.98);
+      const material = new THREE.MeshStandardMaterial({
+        color: 0x2c313a,
+        roughness: 0.95,
+        metalness: 0.03
+      });
+
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(x, 0.01, z);
+      mesh.receiveShadow = true;
+
+      levelGroup.add(mesh);
+    }
+
+    function addTarget(x, z) {
+      const geometry = new THREE.PlaneGeometry(0.8, 0.8);
+      const material = new THREE.MeshStandardMaterial({
+        color: 0x34d399,
+        emissive: 0x22c55e,
+        emissiveIntensity: 0.45,
+        roughness: 0.35,
+        transparent: true,
+        opacity: 0.92
+      });
+
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(x, 0.03, z);
+      mesh.receiveShadow = true;
+
+      levelGroup.add(mesh);
+      targetMeshes.push(mesh);
+      targetSet.add(key(x, z));
+    }
+
+    function addCrate(x, z) {
+      const geometry = new THREE.BoxGeometry(0.9, 0.9, 0.9);
+      const material = new THREE.MeshStandardMaterial({
+        color: 0x9a6a3a,
+        roughness: 0.58,
+        metalness: 0.08,
+        emissive: 0x000000,
+        emissiveIntensity: 0
+      });
+
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x, 0.45, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+
+      levelGroup.add(mesh);
+
+      const crate = {
+        mesh: mesh,
+        material: material,
+        pos: { x, z }
+      };
+
+      crates.push(crate);
+      crateMap.set(key(x, z), crate);
+    }
+
+    function createPlayer(startPos) {
+      const geometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+      const material = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.28,
+        metalness: 0.05,
+        emissive: 0x67e8f9,
+        emissiveIntensity: 0.08
+      });
+
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(startPos.x, 0.4, startPos.z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+
+      return mesh;
+    }
+
+    // =====================================================================
+    // Camera framing
+    // =====================================================================
+
+    function frameLevel() {
+      const cx = (gridCols - 1) / 2;
+      const cz = (gridRows - 1) / 2;
+
+      const maxDim = Math.max(gridCols, gridRows);
+      const dist = maxDim * 0.88 + 5.5;
+
+      camera.position.set(cx, dist * 0.72, cz + dist * 0.78);
+      camera.lookAt(cx, 0, cz);
+
+      cameraBase.copy(camera.position);
+      cameraLookAt.set(cx, 0, cz);
+
+      directional.position.set(cx + 7, 13, cz + 9);
+      directional.target.position.set(cx, 0, cz);
+      directional.target.updateMatrixWorld();
+    }
+
+    // =====================================================================
+    // HUD
+    // =====================================================================
+
+    function updateHUD() {
+      levelInfo.textContent = `${levelIndex + 1}/${LEVELS.length}`;
+
+      const progress = ((levelIndex + 1) / LEVELS.length) * 100;
+      progressFill.style.width = `${progress}%`;
+
+      statusMoves.textContent = String(moves);
+
+      const remaining = crates.filter(
+        crate => !targetSet.has(key(crate.pos.x, crate.pos.z))
+      ).length;
+
+      statusBoxes.textContent = String(remaining);
+
+      const best = getBest(levelIndex);
+      statusBest.textContent = best === null ? "—" : String(best);
+    }
+
+    function updateCrateHighlights() {
+      crates.forEach(crate => {
+        const onTarget = targetSet.has(key(crate.pos.x, crate.pos.z));
+
+        crate.material.emissive.setHex(onTarget ? 0x22c55e : 0x000000);
+        crate.material.emissiveIntensity = onTarget ? 0.35 : 0;
+      });
+    }
+
+    // =====================================================================
+    // Animation
+    // =====================================================================
+
+    function animateMesh(mesh, from, to, duration, onComplete) {
+      const gen = levelGeneration;
+
+      const startPos = new THREE.Vector3(from.x, mesh.position.y, from.z);
+      const endPos = new THREE.Vector3(to.x, mesh.position.y, to.z);
+
+      const startTime = performance.now();
+      animatingCount++;
+
+      function tick(now) {
+        const t = Math.min((now - startTime) / (duration * 1000), 1);
+        const eased = t * t * (3 - 2 * t);
+
+        mesh.position.lerpVectors(startPos, endPos, eased);
+
+        if (t < 1) {
+          requestAnimationFrame(tick);
+        } else {
+          animatingCount = Math.max(0, animatingCount - 1);
+
+          if (onComplete && gen === levelGeneration) {
+            onComplete();
+          }
+        }
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    // =====================================================================
+    // Sokoban movement logic
+    // =====================================================================
+
+    function tryMove(dx, dz) {
+      if (!overlay.hidden || isAnimating()) {
+        return false;
+      }
+
+      const nx = playerPos.x + dx;
+      const nz = playerPos.z + dz;
+
+      if (isWall(nx, nz)) {
+        return false;
+      }
+
+      const crateKey = key(nx, nz);
+      const crate = crateMap.get(crateKey);
+
+      const playerFrom = { x: playerPos.x, z: playerPos.z };
+
+      if (crate) {
+        const bx = nx + dx;
+        const bz = nz + dz;
+
+        const crateTargetKey = key(bx, bz);
+
+        if (isWall(bx, bz) || crateMap.has(crateTargetKey)) {
+          return false;
+        }
+
+        crateMap.delete(crateKey);
+        crateMap.set(crateTargetKey, crate);
+
+        const crateFrom = { x: crate.pos.x, z: crate.pos.z };
+        const crateTo = { x: bx, z: bz };
+
+        crate.pos = crateTo;
+        playerPos = { x: nx, z: nz };
+
+        animateMesh(crate.mesh, crateFrom, crateTo, ANIM_DURATION, null);
+        animateMesh(playerMesh, playerFrom, playerPos, ANIM_DURATION, checkWin);
+      } else {
+        playerPos = { x: nx, z: nz };
+        animateMesh(playerMesh, playerFrom, playerPos, ANIM_DURATION, checkWin);
+      }
+
+      moves++;
+      movementCooldown = MOVE_COOLDOWN;
+
+      updateCrateHighlights();
+      updateHUD();
+
+      return true;
+    }
+
+    function checkWin() {
+      if (won) return;
+      if (crates.length === 0) return;
+
+      const allOnTargets = crates.every(
+        crate => targetSet.has(key(crate.pos.x, crate.pos.z))
+      );
+
+      if (!allOnTargets) return;
+
+      won = true;
+
+      const oldBest = getBest(levelIndex);
+      if (oldBest === null || moves < oldBest) {
+        setBest(levelIndex, moves);
+      }
+
+      updateCrateHighlights();
+      updateHUD();
+
+      spawnExplosion();
+      flashNow();
+
+      const gen = levelGeneration;
+      const isLastLevel = levelIndex === LEVELS.length - 1;
+
+      const title = isLastLevel ? "All 50 Levels Complete!" : "Level Complete!";
+      const sub = isLastLevel
+        ? "Perfect pushing. The warehouse is cleared."
+        : `Solved level ${levelIndex + 1} in ${moves} moves.`;
+
+      winTimeout = setTimeout(() => {
+        if (gen === levelGeneration) {
+          showOverlay(
+            title,
+            sub,
+            isLastLevel ? "Play Again" : "Next Level"
+          );
+        }
+      }, 950);
+    }
+
+    // =====================================================================
+    // Overlay
+    // =====================================================================
+
+    function showOverlay(title, text, nextLabel) {
+      overlayTitle.textContent = title;
+      overlaySub.textContent = text;
+
+      overlayMoves.textContent = String(moves);
+      overlayCrates.textContent = String(crates.length);
+
+      const best = getBest(levelIndex);
+      overlayBest.textContent = best === null ? "—" : String(best);
+
+      btnNext.textContent = nextLabel;
+      overlay.hidden = false;
+    }
+
+    function hideOverlay() {
+      overlay.hidden = true;
+    }
+
+    // =====================================================================
+    // Particles
+    // =====================================================================
+
+    function spawnBurst(center, count, maxSpeed) {
+      if (!scene) return;
+
+      const geometry = new THREE.BufferGeometry();
+
+      const positions = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+      const velocities = new Float32Array(count * 3);
+
+      for (let i = 0; i < count; i++) {
+        const ix = i * 3;
+
+        positions[ix] = center.x + (Math.random() - 0.5) * 0.2;
+        positions[ix + 1] = center.y + (Math.random() - 0.5) * 0.2;
+        positions[ix + 2] = center.z + (Math.random() - 0.5) * 0.2;
+
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        const speed = 1.8 + Math.random() * maxSpeed;
+
+        velocities[ix] = speed * Math.sin(phi) * Math.cos(theta);
+        velocities[ix + 1] = speed * Math.cos(phi) + 1.8;
+        velocities[ix + 2] = speed * Math.sin(phi) * Math.sin(theta);
+
+        const color = PARTICLE_COLORS[(Math.random() * PARTICLE_COLORS.length) | 0];
+
+        colors[ix] = color.r;
+        colors[ix + 1] = color.g;
+        colors[ix + 2] = color.b;
+      }
+
+      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+
+      const material = new THREE.PointsMaterial({
+        size: 0.22,
+        vertexColors: true,
+        transparent: true,
+        opacity: 1,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        sizeAttenuation: true
+      });
+
+      const points = new THREE.Points(geometry, material);
+      scene.add(points);
+
+      particles.push({
+        points: points,
+        geometry: geometry,
+        material: material,
+        velocities: velocities,
+        life: 0,
+        maxLife: 0.9 + Math.random() * 0.5
+      });
+    }
+
+    function spawnExplosion() {
+      spawnBurst(
+        new THREE.Vector3(playerMesh.position.x, 0.7, playerMesh.position.z),
+        150,
+        5.5
+      );
+
+      crates.forEach(crate => {
+        spawnBurst(
+          new THREE.Vector3(crate.pos.x, 0.6, crate.pos.z),
+          12,
+          3.5
+        );
+      });
+    }
+
+    function updateParticles(delta) {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+
+        p.life += delta;
+
+        const pos = p.geometry.attributes.position.array;
+        const vel = p.velocities;
+
+        for (let j = 0; j < pos.length; j += 3) {
+          pos[j] += vel[j] * delta;
+          pos[j + 1] += vel[j + 1] * delta;
+          pos[j + 2] += vel[j + 2] * delta;
+
+          vel[j + 1] -= 6 * delta;
+        }
+
+        p.geometry.attributes.position.needsUpdate = true;
+        p.material.opacity = Math.max(0, 1 - (p.life / p.maxLife));
+
+        if (p.life >= p.maxLife) {
+          scene.remove(p.points);
+          p.geometry.dispose();
+          p.material.dispose();
+
+          particles.splice(i, 1);
+        }
+      }
+    }
+
+    // =====================================================================
+    // Input
+    // =====================================================================
+
+    function bindInput() {
+      window.addEventListener("keydown", e => {
+        if (e.code === "KeyR") {
+          e.preventDefault();
+          hideOverlay();
+          loadLevel(levelIndex);
+          return;
+        }
+
+        if ((e.code === "KeyN" || e.code === "Enter") && !overlay.hidden) {
+          e.preventDefault();
+          btnNext.click();
+          return;
+        }
+
+        if (e.code === "BracketLeft") {
+          e.preventDefault();
+          hideOverlay();
+          loadLevel((levelIndex + LEVELS.length - 1) % LEVELS.length);
+          return;
+        }
+
+        if (e.code === "BracketRight") {
+          e.preventDefault();
+          hideOverlay();
+          loadLevel((levelIndex + 1) % LEVELS.length);
+          return;
+        }
+
+        if (DIRS[e.code] && !e.repeat) {
+          e.preventDefault();
+
+          if (!heldDirs.includes(e.code)) {
+            heldDirs.push(e.code);
+          }
+        }
+      });
+
+      window.addEventListener("keyup", e => {
+        const index = heldDirs.indexOf(e.code);
+
+        if (index >= 0) {
+          heldDirs.splice(index, 1);
+        }
+      });
+
+      window.addEventListener("blur", () => {
+        heldDirs.length = 0;
+      });
+
+      let pointerStart = null;
+
+      renderer.domElement.addEventListener("pointerdown", e => {
+        pointerStart = {
+          x: e.clientX,
+          y: e.clientY
+        };
+
+        renderer.domElement.setPointerCapture(e.pointerId);
+      });
+
+      renderer.domElement.addEventListener("pointerup", e => {
+        if (!pointerStart) return;
+
+        const dx = e.clientX - pointerStart.x;
+        const dy = e.clientY - pointerStart.y;
+
+        pointerStart = null;
+
+        if (Math.abs(dx) < MIN_SWIPE && Math.abs(dy) < MIN_SWIPE) {
+          return;
+        }
+
+        if (Math.abs(dx) > Math.abs(dy)) {
+          tryMove(dx > 0 ? 1 : -1, 0);
+        } else {
+          tryMove(0, dy > 0 ? 1 : -1);
+        }
+      });
+
+      renderer.domElement.addEventListener("pointercancel", () => {
+        pointerStart = null;
+      });
+
+      renderer.domElement.addEventListener("contextmenu", e => {
+        e.preventDefault();
+      });
+
+      document.querySelectorAll("#dpad button").forEach(btn => {
+        const [dx, dz] = btn.dataset.dir.split(",").map(Number);
+
+        btn.addEventListener("pointerdown", e => {
+          e.preventDefault();
+          btn.blur();
+          tryMove(dx, dz);
+        });
+      });
+
+      btnRestart.addEventListener("click", () => {
+        btnRestart.blur();
+        hideOverlay();
+        loadLevel(levelIndex);
+      });
+
+      btnNext.addEventListener("click", () => {
+        btnNext.blur();
+        hideOverlay();
+
+        if (levelIndex < LEVELS.length - 1) {
+          loadLevel(levelIndex + 1);
+        } else {
+          loadLevel(0);
+        }
+      });
+    }
+
+    // =====================================================================
+    // Main loop
+    // =====================================================================
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const delta = clock.getDelta();
+      const t = performance.now() * 0.001;
+
+      movementCooldown = Math.max(0, movementCooldown - delta);
+
+      if (
+        overlay.hidden &&
+        !isAnimating() &&
+        heldDirs.length > 0 &&
+        movementCooldown === 0
+      ) {
+        const code = heldDirs[heldDirs.length - 1];
+        const dir = DIRS[code];
+
+        if (dir) {
+          tryMove(dir.x, dir.z);
+        }
+      }
+
+      targetMeshes.forEach(mesh => {
+        const offset = mesh.position.x * 0.9 + mesh.position.z * 0.7;
+        const pulse = Math.sin(t * 3.2 + offset);
+
+        if (mesh.material) {
+          mesh.material.emissiveIntensity = 0.35 + pulse * 0.22;
+        }
+
+        const scale = 1 + pulse * 0.035;
+        mesh.scale.set(scale, 1, scale);
+      });
+
+      if (playerMesh && playerMesh.material) {
+        playerMesh.material.emissiveIntensity =
+          0.08 + (Math.sin(t * 4) * 0.5 + 0.5) * 0.08;
+      }
+
+      updateParticles(delta);
+
+      camera.position.set(
+        cameraBase.x + Math.sin(t * 0.35) * 0.22 + mouseNX * 0.35,
+        cameraBase.y - mouseNY * 0.18,
+        cameraBase.z + Math.cos(t * 0.3) * 0.22
+      );
+
+      camera.lookAt(cameraLookAt.x, 0, cameraLookAt.z);
+
+      renderer.render(scene, camera);
+    }
+
+    // =====================================================================
+    // Start
+    // =====================================================================
+
+    initThree();
+    bindInput();
+    loadLevel(0);
+    animate();
+  </script>
+</body>
+</html>
