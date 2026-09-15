@@ -78,7 +78,6 @@
     canvas {
       position: fixed;
       inset: 0;
-      bottom: 26px; /* progress strip lives here; canvas ends above it */
       z-index: 1;
       display: block;
       touch-action: none;
@@ -92,10 +91,6 @@
       box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
     }
 
-    /* ------------------------------------------------------------------ */
-    /* Top HUD: one compact strip, vertical-first                          */
-    /* ------------------------------------------------------------------ */
-
     #topbar {
       position: fixed;
       top: 10px;
@@ -103,9 +98,9 @@
       right: 10px;
       z-index: 2;
       display: flex;
-      align-items: center;
-      justify-content: space-between;
+      flex-wrap: wrap;
       gap: 8px;
+      align-items: stretch;
       pointer-events: none;
     }
 
@@ -117,13 +112,12 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 7px 11px;
-      border-radius: 12px;
+      padding: 9px 12px;
+      border-radius: 14px;
       font-family: "Space Grotesk", sans-serif;
       font-weight: 700;
-      font-size: 13px;
+      font-size: 14px;
       letter-spacing: 0.2px;
-      white-space: nowrap;
     }
 
     .logo .orb {
@@ -131,41 +125,32 @@
       height: 9px;
       border-radius: 50%;
       background: conic-gradient(from 90deg, #67e8f9, #a78bfa, #34d399, #67e8f9);
-      box-shadow: 0 0 12px rgba(103, 232, 249, 0.75);
-      flex: none;
+      box-shadow: 0 0 16px rgba(103, 232, 249, 0.75);
     }
 
-    .logo .badge {
-      display: none;
+    .badge {
+      margin-left: 2px;
       padding: 2px 7px;
       border-radius: 999px;
       font-size: 9px;
       font-weight: 800;
-      letter-spacing: 0.9px;
+      letter-spacing: 0.8px;
       color: #dbeafe;
       background: linear-gradient(90deg, rgba(34, 211, 238, 0.22), rgba(167, 139, 250, 0.22));
       border: 1px solid rgba(255, 255, 255, 0.16);
     }
 
-    @media (min-width: 600px) {
-      .logo .badge {
-        display: inline-block;
-      }
-    }
-
-    /* Tiny M / B / Best cluster. */
-
-    #hud-stats {
+    .stats {
       display: flex;
       gap: 6px;
-      padding: 5px;
-      border-radius: 12px;
+      padding: 6px;
+      border-radius: 14px;
     }
 
     .stat {
-      min-width: 54px;
-      padding: 4px 8px 5px;
-      border-radius: 9px;
+      min-width: 56px;
+      padding: 5px 8px;
+      border-radius: 10px;
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.08);
       display: flex;
@@ -177,60 +162,76 @@
     .stat span {
       font-size: 8px;
       text-transform: uppercase;
-      letter-spacing: 0.8px;
+      letter-spacing: 0.7px;
       color: #93a1b5;
-      line-height: 1;
     }
 
     .stat strong {
       font-size: 12px;
+      line-height: 1.15;
       color: white;
       font-weight: 800;
-      line-height: 1.15;
-      font-variant-numeric: tabular-nums;
     }
 
-    /* ------------------------------------------------------------------ */
-    /* Bottom progress strip (sits in the canvas inset, never overlaps)    */
-    /* ------------------------------------------------------------------ */
+    /* Small in-game restart, in case the player gets stuck */
+    .mini-btn {
+      align-self: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 19px;
+      line-height: 1;
+      color: #eaf2ff;
+      cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05));
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
+      transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    }
 
-    #progress-dock {
+    .mini-btn:hover {
+      transform: rotate(-35deg) scale(1.06);
+      border-color: rgba(34, 211, 238, 0.55);
+      box-shadow: 0 10px 22px rgba(34, 211, 238, 0.16);
+    }
+
+    .mini-btn:active {
+      transform: rotate(-90deg) scale(0.94);
+    }
+
+    /* Progress docked below the board; the camera's top margin keeps
+       the board from ever overlapping it */
+    #bottombar {
       position: fixed;
-      left: 10px;
-      right: 10px;
-      bottom: 0;
+      bottom: 12px;
+      left: 12px;
+      right: 12px;
       z-index: 2;
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 8px 10px 9px;
-      pointer-events: none;
+      padding: 9px 12px;
+      border-radius: 14px;
     }
 
-    #level-info {
-      flex: none;
+    #level-label {
       font-family: "Space Grotesk", sans-serif;
       font-size: 12px;
       font-weight: 700;
-      letter-spacing: 0.4px;
-      color: #b8c4d4;
-      font-variant-numeric: tabular-nums;
-    }
-
-    #level-info strong {
-      color: #ffffff;
-      font-size: 13px;
-      font-weight: 700;
-      margin-right: 3px;
+      letter-spacing: 0.3px;
+      color: #dbeafe;
+      white-space: nowrap;
     }
 
     .bar {
       flex: 1;
-      height: 6px;
+      height: 7px;
       border-radius: 999px;
       overflow: hidden;
       background: rgba(255, 255, 255, 0.09);
-      border: 1px solid rgba(255, 255, 255, 0.06);
     }
 
     #progress-fill {
@@ -239,105 +240,85 @@
       border-radius: 999px;
       background: linear-gradient(90deg, #22d3ee, #a78bfa, #34d399);
       transition: width 0.35s ease;
-      box-shadow: 0 0 14px rgba(34, 211, 238, 0.35);
+      box-shadow: 0 0 18px rgba(34, 211, 238, 0.35);
     }
 
-    /* ------------------------------------------------------------------ */
-    /* First-move hint                                                     */
-    /* ------------------------------------------------------------------ */
+    #controls {
+      position: fixed;
+      left: 14px;
+      bottom: 14px;
+      z-index: 2;
+      padding: 10px 12px;
+      border-radius: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 14px;
+      font-size: 13px;
+      color: #b8c4d4;
+    }
 
+    .key {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 22px;
+      margin-right: 3px;
+      padding: 0 6px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    /* First-run swipe hint (level 1 only) */
     #hint {
       position: fixed;
       left: 50%;
-      top: 58%;
+      bottom: 70px;
+      transform: translateX(-50%);
       z-index: 2;
-      transform: translate(-50%, -50%);
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      color: #eaf2ff;
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 10px 14px;
-      border-radius: 999px;
-      font-size: 13px;
-      font-weight: 700;
-      color: #eaf2ff;
+      gap: 9px;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.35s ease, transform 0.35s ease;
+      transition: opacity 0.3s ease;
+      white-space: nowrap;
     }
 
     #hint.show {
       opacity: 1;
-      animation: hintBob 2.2s ease-in-out infinite;
     }
 
-    #hint .chevrons {
-      display: flex;
-      gap: 3px;
-      flex: none;
+    #hint .swipe-hand {
+      display: inline-block;
+      font-size: 18px;
+      animation: swipeNudge 1.4s ease-in-out infinite;
     }
 
-    #hint .chevrons i {
-      width: 7px;
-      height: 7px;
-      border-right: 2px solid #67e8f9;
-      border-bottom: 2px solid #67e8f9;
-      transform: rotate(-45deg);
-      border-radius: 1px;
-      animation: chev 1.4s ease-in-out infinite;
-    }
-
-    #hint .chevrons i:nth-child(2) {
-      animation-delay: 0.15s;
-      opacity: 0.7;
-    }
-
-    #hint .chevrons i:nth-child(3) {
-      animation-delay: 0.3s;
-      opacity: 0.45;
-    }
-
-    @keyframes chev {
+    @keyframes swipeNudge {
       0%, 100% {
-        transform: rotate(-45deg) translate(0, 0);
+        transform: translateX(-6px);
       }
       50% {
-        transform: rotate(-45deg) translate(2px, -2px);
+        transform: translateX(6px);
       }
     }
-
-    @keyframes hintBob {
-      0%, 100% {
-        transform: translate(-50%, -50%);
-      }
-      50% {
-        transform: translate(-50%, calc(-50% - 5px));
-      }
-    }
-
-    #hint small {
-      display: block;
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.4px;
-      color: #9fb0c6;
-    }
-
-    @media (max-height: 480px) {
-      #hint {
-        top: 70%;
-        font-size: 12px;
-        padding: 8px 12px;
-      }
-    }
-
-    /* ------------------------------------------------------------------ */
-    /* Toast, flash, overlay (unchanged)                                   */
-    /* ------------------------------------------------------------------ */
 
     #toast {
       position: fixed;
       left: 50%;
-      bottom: 38px;
+      bottom: 64px;
       transform: translateX(-50%) translateY(8px);
       z-index: 2;
       padding: 9px 14px;
@@ -465,6 +446,35 @@
       font-weight: 800;
     }
 
+    .overlay-actions {
+      display: flex;
+      justify-content: center;
+    }
+
+    /* Room for a little uplifting line under the buttons */
+    #overlay-quote {
+      margin: 18px 0 0;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 13px;
+      font-style: italic;
+      color: #9fb0c8;
+      letter-spacing: 0.2px;
+      animation: quoteIn 0.45s ease 0.12s both;
+    }
+
+    @keyframes quoteIn {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
     .btn {
       margin: 0 6px;
       padding: 11px 16px;
@@ -496,6 +506,24 @@
     .btn.primary:hover {
       box-shadow: 0 16px 32px rgba(6, 182, 212, 0.3);
     }
+
+    @media (max-width: 900px) {
+      .logo {
+        font-size: 13px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      #controls {
+        display: none;
+      }
+
+      .mini-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+      }
+    }
   </style>
 </head>
 
@@ -509,7 +537,7 @@
       <span class="badge">PHC 2026</span>
     </div>
 
-    <div id="hud-stats" class="glass">
+    <div class="stats glass">
       <div class="stat">
         <span>Moves</span>
         <strong id="status-moves">0</strong>
@@ -523,21 +551,32 @@
         <strong id="status-best">—</strong>
       </div>
     </div>
+
+    <button id="btn-mini-restart" class="mini-btn" title="Restart level (R)" aria-label="Restart level">↺</button>
   </header>
 
-  <div id="hint" class="glass" aria-hidden="true">
-    <span class="chevrons"><i></i><i></i><i></i></span>
-    <span>
-      Swipe to move the cube
-      <small>or W A S D / arrows on desktop</small>
-    </span>
-  </div>
-
-  <div id="progress-dock">
-    <span id="level-info"><strong>1</strong>/100</span>
+  <div id="bottombar" class="glass">
+    <span id="level-label">1 / 100</span>
     <div class="bar">
       <div id="progress-fill"></div>
     </div>
+  </div>
+
+  <div id="controls" class="glass">
+    <span>
+      <span class="key">W</span>
+      <span class="key">A</span>
+      <span class="key">S</span>
+      <span class="key">D</span>
+    </span>
+    <span>Swipe to move</span>
+    <span><span class="key">R</span> Restart</span>
+    <span><span class="key">[</span><span class="key">]</span> Level</span>
+  </div>
+
+  <div id="hint" class="glass" aria-hidden="true">
+    <span class="swipe-hand">👆</span>
+    <span>Swipe to move the cube</span>
   </div>
 
   <div id="toast" class="glass"></div>
@@ -563,8 +602,12 @@
         </div>
       </div>
 
-      <button id="btn-restart" class="btn">Restart</button>
-      <button id="btn-next" class="btn primary">Next Level</button>
+      <div class="overlay-actions">
+        <button id="btn-restart" class="btn">Restart</button>
+        <button id="btn-next" class="btn primary">Next Level</button>
+      </div>
+
+      <p id="overlay-quote"></p>
     </div>
   </div>
 
@@ -581,7 +624,7 @@
     // + = player on target
     // * = crate on target
     //
-    // The first five layouts are hand-written; the rest are generated.
+    // The first five layouts are hand-written; the other 95 are generated.
     // Every generated layout is built from small, verifiable pieces:
     //
     //   * a solid outer boundary,
@@ -601,10 +644,8 @@
     // Want a fresh puzzle on every page load instead? Change LAYOUT_SEED
     // to (Math.random() * 0xffffffff) | 0.
     //
-    // Difficulty t runs 0 -> 1 across the generated set, so the last 25
-    // levels (1/2 of the generated range) draw the largest boards, the
-    // most crates, the longest push distances and the densest bays —
-    // the hardest stretch of the game.
+    // Difficulty curve: the final quarter (levels 76-100) ramps hardest —
+    // more crates, longer pushes, bigger boards, more clutter.
     // =====================================================================
 
     const BASE_LEVELS = [
@@ -788,15 +829,8 @@
 
       // ---- Crates: one private straight push lane each ---------------
 
-      // The last quarter of the difficulty ramp gets one extra lane per
-      // board so levels 75-100 carry the heaviest crate counts.
-      const extraCrate = t > 0.75 && rng() < 0.5 ? 1 : 0;
-      const crateCount = clamp(
-        2 + Math.round(t * 6) + extraCrate + (rng() < 0.3 ? 1 : 0),
-        2,
-        9
-      );
-      const maxDist = clamp(2 + Math.round(t * 5) + randInt(rng, 0, 2), 2, 8);
+      const crateCount = clamp(2 + Math.round(t * 5) + (rng() < 0.35 ? 1 : 0), 2, 8);
+      const maxDist = clamp(2 + Math.round(t * 4) + randInt(rng, 0, 2), 2, 7);
 
       // Dock candidates: floor cells that touch a wall, with the push
       // direction pointing into that wall.
@@ -857,7 +891,7 @@
 
       // ---- Interior pillars / blocks (kept off the lanes) ------------
 
-      const obstacleCount = clamp(1 + Math.round(t * 7), 1, 10);
+      const obstacleCount = clamp(1 + Math.round(t * 6), 1, 9);
       const shapes = [[1, 1], [2, 1], [1, 2], [2, 2], [3, 1], [1, 3]];
 
       for (let i = 0; i < obstacleCount; i++) {
@@ -1001,7 +1035,11 @@
       const levels = [];
 
       for (let k = 0; k < count; k++) {
-        const difficulty = count > 1 ? k / (count - 1) : 1;
+        // Ease-in curve: gentle through the middle, steepest ramp in
+        // the final quarter of the game (t -> t^1.35 pushes most of the
+        // difficulty up into the last 25 levels).
+        const raw = count > 1 ? k / (count - 1) : 1;
+        const difficulty = Math.pow(raw, 1.35);
         const seed = (LAYOUT_SEED ^ Math.imul(k + 1, 2654435761)) | 0;
 
         let grid = null;
@@ -1017,14 +1055,57 @@
       return levels;
     }
 
-    // 5 hand-written + 95 generated = 100 levels.
     const LEVELS = BASE_LEVELS.concat(generateNewLevels(95));
+
+    // =====================================================================
+    // Level-complete quotes (23 total, no immediate repeats)
+    // =====================================================================
+
+    const WIN_QUOTES = [
+      "Wow! Good Job!",
+      "Awesome, You Nailed It!",
+      "Holy Smokes! You Rocked That One!",
+      "Boom! Pure Genius Moving!",
+      "Fantastic! You Cracked That One!",
+      "Look At You Go — Brilliant!",
+      "Superb! The Warehouse Is Pleased.",
+      "You Made That Look Easy!",
+      "Brilliant Work, Master Pusher!",
+      "Incredible! Every Crate In Its Place!",
+      "Yes! That's How You Do It!",
+      "Magnificent! You Own This Board!",
+      "Zap! Solved With Style!",
+      "Outstanding! Your Reflexes Are On Fire!",
+      "Chef's Kiss — Flawless Pushing!",
+      "Big Brain Energy! Level Conquered!",
+      "Wahoo! You Crushed It Again!",
+      "Stellar! Those Crates Are Dancin'!",
+      "Voilà! Another One In The Bag!",
+      "Phenomenal! You're On A Roll!",
+      "Sweet! Your Strategy Is Tight!",
+      "Ta-Da! Certified Crate Whisperer!",
+      "Wowza! You're Unstoppable!"
+    ];
+
+    let lastWinQuote = -1;
+
+    function pickQuote() {
+      let i;
+
+      do {
+        i = Math.floor(Math.random() * WIN_QUOTES.length);
+      } while (WIN_QUOTES.length > 1 && i === lastWinQuote);
+
+      lastWinQuote = i;
+
+      return WIN_QUOTES[i];
+    }
 
     // =====================================================================
     // DOM references
     // =====================================================================
 
-    const levelInfo = document.getElementById("level-info");
+    const levelLabel = document.getElementById("level-label");
     const progressFill = document.getElementById("progress-fill");
     const statusMoves = document.getElementById("status-moves");
     const statusBoxes = document.getElementById("status-boxes");
@@ -1036,9 +1117,11 @@
     const overlayMoves = document.getElementById("overlay-moves");
     const overlayBest = document.getElementById("overlay-best");
     const overlayCrates = document.getElementById("overlay-crates");
+    const overlayQuote = document.getElementById("overlay-quote");
 
     const btnRestart = document.getElementById("btn-restart");
     const btnNext = document.getElementById("btn-next");
+    const btnMiniRestart = document.getElementById("btn-mini-restart");
 
     const toastEl = document.getElementById("toast");
     const flashEl = document.getElementById("flash");
@@ -1097,7 +1180,6 @@
 
     let winTimeout = null;
     let toastTimer = null;
-    let hintTimer = null;
 
     let mouseNX = 0;
     let mouseNY = 0;
@@ -1169,6 +1251,69 @@
       flashEl.classList.remove("on");
       void flashEl.offsetWidth;
       flashEl.classList.add("on");
+    }
+
+    // =====================================================================
+    // Sound effects — small synthesized blips, no audio assets needed
+    // =====================================================================
+
+    let audioCtx = null;
+
+    function ensureAudio() {
+      if (!audioCtx) {
+        try {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (err) {
+          audioCtx = null;
+        }
+      }
+
+      if (audioCtx && audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+
+      return audioCtx;
+    }
+
+    function tone(type, fromFreq, toFreq, duration, peak) {
+      const ctx = ensureAudio();
+      if (!ctx) return;
+
+      const t0 = ctx.currentTime;
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = type;
+      osc.frequency.setValueAtTime(fromFreq, t0);
+      osc.frequency.exponentialRampToValueAtTime(toFreq, t0 + duration);
+
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(peak, t0 + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(t0);
+      osc.stop(t0 + duration + 0.02);
+    }
+
+    // Subtle blip when the player cube steps.
+    function playBlip() {
+      const jitter = 0.95 + Math.random() * 0.1;
+      tone("triangle", 520 * jitter, 330 * jitter, 0.09, 0.06);
+    }
+
+    // Lower, heavier blip when a crate gets pushed (not onto a goal).
+    function playPush() {
+      tone("sine", 300, 190, 0.12, 0.08);
+    }
+
+    // Satisfying bloop when a crate lands on a goal.
+    function playBloop() {
+      tone("sine", 320, 120, 0.2, 0.12);
+      tone("sine", 780, 660, 0.1, 0.035);
     }
 
     // =====================================================================
@@ -1348,14 +1493,12 @@
       updateCrateHighlights();
       updateHUD();
 
-      showToast(`Level ${levelIndex + 1} Loaded`);
+      // First-time hint, level 1 only.
+      if (levelIndex === 0) {
+        hintShow();
+      }
 
-      // Re-arm the first-move hint; it fades in shortly after load.
-      clearTimeout(hintTimer);
-      hintEl.classList.remove("show");
-      hintTimer = setTimeout(() => {
-        hintEl.classList.add("show");
-      }, 650);
+      showToast(`Level ${levelIndex + 1} Loaded`);
     }
 
     // =====================================================================
@@ -1464,23 +1607,28 @@
     }
 
     // =====================================================================
-    // Camera framing — straight down, always fitting the whole board
+    // Camera framing — straight down, always fitting the whole board.
+    // The bottom margin reserves room for the docked progress bar so the
+    // board can never overlap it.
     // =====================================================================
 
     function frameLevel() {
       const cx = (gridCols - 1) / 2;
       const cz = (gridRows - 1) / 2;
 
-      // Half-extents of the board in world units, with a small margin.
+      // Half-extents of the board in world units, with margins. The
+      // bottom margin is larger to leave a guaranteed gap above the
+      // docked progress bar.
       const halfW = (gridCols - 1) / 2 + 0.6;
       const halfH = (gridRows - 1) / 2 + 0.6;
+      const bottomPad = 2.2;
 
       // Height needed for the board to fit vertically AND horizontally
       // (the horizontal FOV depends on the window aspect ratio).
       const vFov = THREE.MathUtils.degToRad(camera.fov);
       const hFov = 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect);
 
-      const heightVertical = halfH / Math.tan(vFov / 2);
+      const heightVertical = (halfH + bottomPad) / Math.tan(vFov / 2);
       const heightHorizontal = halfW / Math.tan(hFov / 2);
       const height = Math.max(heightVertical, heightHorizontal) * 1.05;
 
@@ -1508,7 +1656,7 @@
     // =====================================================================
 
     function updateHUD() {
-      levelInfo.innerHTML = `<strong>${levelIndex + 1}</strong>/${LEVELS.length}`;
+      levelLabel.textContent = `${levelIndex + 1} / ${LEVELS.length}`;
 
       const progress = ((levelIndex + 1) / LEVELS.length) * 100;
       progressFill.style.width = `${progress}%`;
@@ -1609,9 +1757,17 @@
 
         animateMesh(crate.mesh, crateFrom, crateTo, ANIM_DURATION, null);
         animateMesh(playerMesh, playerFrom, playerPos, ANIM_DURATION, checkWin);
+
+        // Bloop when the crate lands on a goal, lower thud otherwise.
+        if (targetSet.has(key(bx, bz))) {
+          playBloop();
+        } else {
+          playPush();
+        }
       } else {
         playerPos = { x: nx, z: nz };
         animateMesh(playerMesh, playerFrom, playerPos, ANIM_DURATION, checkWin);
+        playBlip();
       }
 
       moves++;
@@ -1620,9 +1776,7 @@
       updateCrateHighlights();
       updateHUD();
 
-      // First real move committed (from any input source): drop the hint.
-      clearTimeout(hintTimer);
-      hintEl.classList.remove("show");
+      hintDismiss();
 
       return true;
     }
@@ -1649,8 +1803,6 @@
 
       spawnExplosion();
       flashNow();
-
-      hintEl.classList.remove("show");
 
       const gen = levelGeneration;
       const isLastLevel = levelIndex === LEVELS.length - 1;
@@ -1685,12 +1837,30 @@
       const best = getBest(levelIndex);
       overlayBest.textContent = best === null ? "—" : String(best);
 
+      overlayQuote.textContent = `“${pickQuote()}”`;
+
       btnNext.textContent = nextLabel;
       overlay.hidden = false;
     }
 
     function hideOverlay() {
       overlay.hidden = true;
+    }
+
+    // =====================================================================
+    // First-run swipe hint (level 1 only)
+    // =====================================================================
+
+    function hintShow() {
+      hintEl.classList.add("show");
+      hintEl.setAttribute("aria-hidden", "false");
+    }
+
+    function hintDismiss() {
+      if (hintEl.classList.contains("show")) {
+        hintEl.classList.remove("show");
+        hintEl.setAttribute("aria-hidden", "true");
+      }
     }
 
     // =====================================================================
@@ -1877,6 +2047,9 @@
           return;
         }
 
+        // Any real swipe dismisses the first-run hint.
+        hintDismiss();
+
         if (Math.abs(dx) > Math.abs(dy)) {
           tryMove(dx > 0 ? 1 : -1, 0);
         } else {
@@ -1890,6 +2063,12 @@
 
       renderer.domElement.addEventListener("contextmenu", e => {
         e.preventDefault();
+      });
+
+      btnMiniRestart.addEventListener("click", () => {
+        btnMiniRestart.blur();
+        hideOverlay();
+        loadLevel(levelIndex);
       });
 
       btnRestart.addEventListener("click", () => {
