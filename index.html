@@ -577,6 +577,26 @@
     // $ = crate
     // + = player on target
     // * = crate on target
+    //
+    // The first five layouts are hand-written; the rest are generated.
+    // Every generated layout is built from small, verifiable pieces:
+    //
+    //   * a solid outer boundary,
+    //   * wall bays / protrusions and interior pillars for variety,
+    //   * one private, straight push lane per crate (start -> dock),
+    //     with the dock direction (up / down / left / right) free to
+    //     differ per crate.
+    //
+    // After assembly a simulation proves the level is solvable: crates
+    // are pushed along their lanes in a shuffled order while a BFS
+    // proves the player can reach each push cell. If any check fails the
+    // layout is rebuilt with a new seed, so a hard level is never
+    // accidentally impossible.
+    //
+    // Layouts are seeded by their index, so level 17 always generates
+    // the same puzzle on every machine (best scores stay comparable).
+    // Want a fresh puzzle on every page load instead? Change LAYOUT_SEED
+    // to (Math.random() * 0xffffffff) | 0.
     // =====================================================================
 
     const BASE_LEVELS = [
@@ -617,151 +637,366 @@
       ]
     ];
 
-    function centeredRange(start, end, center) {
-      if (start > end) return [];
+    // ------------------------------------------------------------------
+    // Seeded generation helpers
+    // ------------------------------------------------------------------
 
-      const values = [];
-      for (let i = start; i <= end; i++) values.push(i);
+    const LAYOUT_SEED = 20260521;
 
-      values.sort((a, b) => {
-        const da = Math.abs(a - center);
-        const db = Math.abs(b - center);
+    function mulberry32(seed) {
+      let a = seed >>> 0;
 
-        if (da !== db) return da - db;
-        return a - b;
+      return function () {
+        a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function randInt(rng, min, max) {
+      return min + Math.floor(rng() * (max - min + 1));
+    }
+
+    function pick(rng, arr) {
+      return arr[Math.floor(rng() * arr.length)];
+    }
+
+    function shuffle(rng, arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        const tmp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = tmp;
+      }
+      return arr;
+    }
+
+    function clamp(v, a, b) {
+      return Math.max(a, Math.min(b, v));
+    }
+
+    const DIR4 = [
+      { x: 0, z: -1 },
+      { x: 0, z: 1 },
+      { x: -1, z: 0 },
+      { x: 1, z: 0 }
+    ];
+
+    // Flood fill from (x, z) over every cell not present in `blocked`.
+    // Returns the set of reachable "x,z" keys.
+    function reachable(x, z, blocked) {
+      const seen = new Set([x + "," + z]);
+      const stack = [[x, z]];
+
+      while (stack.length) {
+        const top = stack.pop();
+        const cx = top[0];
+        const cz = top[1];
+
+        for (let i = 0; i < 4; i++) {
+          const nx = cx + DIR4[i].x;
+          const nz = cz + DIR4[i].z;
+          const k = nx + "," + nz;
+
+          if (!seen.has(k) && !blocked.has(k)) {
+            seen.add(k);
+            stack.push([nx, nz]);
+          }
+        }
+      }
+
+      return seen;
+    }
+
+    // ------------------------------------------------------------------
+    // Layout attempt: returns grid rows, or null to try another seed.
+    // `t` is difficulty, 0 (early levels) -> 1 (late levels).
+    // ------------------------------------------------------------------
+
+    function tryGenerateLevel(rng, t) {
+      const W = clamp(8 + Math.round(t * 9) + randInt(rng, -1, 2), 8, 19);
+      const H = clamp(8 + Math.round(t * 5) + randInt(rng, -1, 2), 8, 14);
+
+      const cx = (W - 1) / 2;
+      const cz = (H - 1) / 2;
+
+      const grid = [];
+
+      for (let z = 0; z < H; z++) {
+        const row = [];
+
+        for (let x = 0; x < W; x++) {
+          row.push((x === 0 || x === W - 1 || z === 0 || z === H - 1) ? "#" : " ");
+        }
+
+        grid.push(row);
+      }
+
+      const inRoom = (x, z) => x > 0 && x < W - 1 && z > 0 && z < H - 1;
+      const isWall = (x, z) => !inRoom(x, z) || grid[z][x] === "#";
+
+      // ---- Boundary bays: wall blocks jutting in from an edge --------
+
+      const bayCount = randInt(rng, 1, 1 + Math.round(t * 3));
+
+      function placeBlock(x0, z0, w, h) {
+        for (let z = z0; z < z0 + h; z++) {
+          for (let x = x0; x < x0 + w; x++) {
+            if (grid[z][x] !== " ") return false;
+          }
+        }
+
+        for (let z = z0; z < z0 + h; z++) {
+          for (let x = x0; x < x0 + w; x++) {
+            grid[z][x] = "#";
+          }
+        }
+
+        return true;
+      }
+
+      for (let i = 0; i < bayCount; i++) {
+        const side = randInt(rng, 0, 3); // 0 top, 1 bottom, 2 left, 3 right
+        const depth = randInt(rng, 1, 2);
+        const width = randInt(rng, 1, 2);
+
+        for (let tries = 0; tries < 24; tries++) {
+          let ok = false;
+
+          if (side === 0) {
+            ok = placeBlock(randInt(rng, 2, W - 3), 1, width, depth);
+          } else if (side === 1) {
+            ok = placeBlock(randInt(rng, 2, W - 3), H - 1 - depth, width, depth);
+          } else if (side === 2) {
+            ok = placeBlock(1, randInt(rng, 2, H - 3), depth, width);
+          } else {
+            ok = placeBlock(W - 1 - depth, randInt(rng, 2, H - 3), depth, width);
+          }
+
+          if (ok) break;
+        }
+      }
+
+      // ---- Crates: one private straight push lane each ---------------
+
+      const crateCount = clamp(2 + Math.round(t * 5) + (rng() < 0.35 ? 1 : 0), 2, 8);
+      const maxDist = clamp(2 + Math.round(t * 4) + randInt(rng, 0, 2), 2, 7);
+
+      // Dock candidates: floor cells that touch a wall, with the push
+      // direction pointing into that wall.
+      const docks = [];
+
+      for (let z = 1; z < H - 1; z++) {
+        for (let x = 1; x < W - 1; x++) {
+          if (grid[z][x] !== " ") continue;
+
+          for (let d = 0; d < 4; d++) {
+            if (isWall(x + DIR4[d].x, z + DIR4[d].z)) {
+              docks.push({ x: x, z: z, dir: DIR4[d] });
+            }
+          }
+        }
+      }
+
+      shuffle(rng, docks);
+
+      const lanes = [];
+      const usedCells = new Set();
+
+      for (let i = 0; i < docks.length && lanes.length < crateCount; i++) {
+        const dock = docks[i];
+        const dist = randInt(rng, 2, maxDist);
+        const cells = [];
+        let valid = true;
+
+        // i=0 is the target, i=dist the crate start, i=dist+1 the cell
+        // where the player must stand to begin the push.
+        for (let n = 0; n <= dist + 1; n++) {
+          const x = dock.x - dock.dir.x * n;
+          const z = dock.z - dock.dir.z * n;
+          const k = x + "," + z;
+
+          if (!inRoom(x, z) || grid[z][x] !== " " || usedCells.has(k)) {
+            valid = false;
+            break;
+          }
+
+          cells.push({ x: x, z: z });
+        }
+
+        if (!valid) continue;
+
+        cells.forEach(c => usedCells.add(c.x + "," + c.z));
+
+        lanes.push({
+          target: cells[0],
+          start: cells[dist],
+          pushFrom: cells[dist + 1],
+          dir: dock.dir,
+          dist: dist
+        });
+      }
+
+      if (lanes.length < crateCount) return null;
+
+      // ---- Interior pillars / blocks (kept off the lanes) ------------
+
+      const obstacleCount = clamp(1 + Math.round(t * 6), 1, 9);
+      const shapes = [[1, 1], [2, 1], [1, 2], [2, 2], [3, 1], [1, 3]];
+
+      for (let i = 0; i < obstacleCount; i++) {
+        const shape = pick(rng, shapes);
+        const w = shape[0];
+        const h = shape[1];
+
+        for (let tries = 0; tries < 28; tries++) {
+          const x0 = randInt(rng, 2, W - 3 - w);
+          const z0 = randInt(rng, 2, H - 3 - h);
+
+          let valid = true;
+
+          for (let z = z0; z < z0 + h && valid; z++) {
+            for (let x = x0; x < x0 + w && valid; x++) {
+              if (grid[z][x] !== " " || usedCells.has(x + "," + z)) valid = false;
+            }
+          }
+
+          if (!valid) continue;
+
+          for (let z = z0; z < z0 + h; z++) {
+            for (let x = x0; x < x0 + w; x++) {
+              grid[z][x] = "#";
+            }
+          }
+
+          break;
+        }
+      }
+
+      // ---- Player start: open cell near the middle -------------------
+
+      const startCandidates = [];
+
+      for (let z = 2; z <= H - 3; z++) {
+        for (let x = 2; x <= W - 3; x++) {
+          if (grid[z][x] === " " && !usedCells.has(x + "," + z)) {
+            startCandidates.push({
+              x: x,
+              z: z,
+              score: (x - cx) * (x - cx) + (z - cz) * (z - cz) + rng() * 4
+            });
+          }
+        }
+      }
+
+      if (!startCandidates.length) return null;
+
+      startCandidates.sort((a, b) => a.score - b.score);
+      const start = startCandidates[0];
+
+      // ---- Solvability check: simulate the pushes --------------------
+      //
+      // Lanes are cell-disjoint and crates only ever sit on their own
+      // lane, so a crate is only ever blocked by walls or by the crates
+      // that have not been pushed yet. Trying a few crate orders makes
+      // the check forgiving while still guaranteeing correctness.
+
+      const walls = new Set();
+
+      for (let z = 0; z < H; z++) {
+        for (let x = 0; x < W; x++) {
+          if (grid[z][x] === "#") walls.add(x + "," + z);
+        }
+      }
+
+      function solvableInOrder(order) {
+        const pending = new Set();
+
+        order.forEach(l => pending.add(l.start.x + "," + l.start.z));
+
+        let px = start.x;
+        let pz = start.z;
+
+        for (let i = 0; i < order.length; i++) {
+          const lane = order[i];
+
+          const blocked = new Set(walls);
+          pending.forEach(k => blocked.add(k));
+
+          if (!reachable(px, pz, blocked).has(lane.pushFrom.x + "," + lane.pushFrom.z)) {
+            return false;
+          }
+
+          let bx = lane.start.x;
+          let bz = lane.start.z;
+
+          for (let s = 0; s < lane.dist; s++) {
+            const nx = bx + lane.dir.x;
+            const nz = bz + lane.dir.z;
+            const nk = nx + "," + nz;
+
+            if (walls.has(nk) || pending.has(nk)) return false;
+
+            pending.delete(bx + "," + bz);
+            pending.add(nk);
+
+            px = bx;
+            pz = bz;
+            bx = nx;
+            bz = nz;
+          }
+        }
+
+        return true;
+      }
+
+      let ok = false;
+
+      for (let o = 0; o < 3 && !ok; o++) {
+        ok = solvableInOrder(shuffle(rng, lanes.slice()));
+      }
+
+      if (!ok) return null;
+
+      // ---- Stamp the result ------------------------------------------
+
+      lanes.forEach(l => {
+        grid[l.target.z][l.target.x] = ".";
+        grid[l.start.z][l.start.x] = "$";
       });
 
-      return values;
+      grid[start.z][start.x] = "@";
+
+      return grid.map(row => row.join(""));
+    }
+
+    // Guaranteed-solvable safety net (practically never used).
+    function fallbackLevel() {
+      return [
+        "#######",
+        "#  $ .#",
+        "# @   #",
+        "#  $ .#",
+        "#######"
+      ];
     }
 
     function generateNewLevels(count) {
       const levels = [];
 
-      for (let k = 1; k <= count; k++) {
-        // Push distance increases in stages.
-        // 1-10: 1 cell
-        // 11-20: 2 cells
-        // 21-30: 3 cells
-        // 31-45: 4 cells
-        const L = 1 + Math.min(3, Math.floor((k - 1) / 10));
+      for (let k = 0; k < count; k++) {
+        const difficulty = count > 1 ? k / (count - 1) : 1;
+        const seed = (LAYOUT_SEED ^ Math.imul(k + 1, 2654435761)) | 0;
 
-        const minDim = 5 + 2 * L;
+        let grid = null;
 
-        // Board size grows from 7x7 to 21x15.
-        const W = Math.max(minDim, 7 + Math.min(14, Math.floor((k * 14) / count)));
-        const H = Math.max(minDim, 7 + Math.min(8, Math.floor((k * 8) / count)));
-
-        const inset = 2 + L;
-        const endX = W - 1 - inset;
-        const endZ = H - 1 - inset;
-
-        const cx = Math.floor(W / 2);
-        const cz = Math.floor(H / 2);
-
-        const topXs = centeredRange(inset, endX, cx);
-        const bottomXs = centeredRange(inset, endX, cx);
-        const leftZs = centeredRange(inset, endZ, cz);
-        const rightZs = centeredRange(inset, endZ, cz);
-
-        const candidates = [
-          topXs.map(x => ({ side: "top", x, z: 1 + L })),
-          bottomXs.map(x => ({ side: "bottom", x, z: H - 2 - L })),
-          leftZs.map(z => ({ side: "left", x: 1 + L, z })),
-          rightZs.map(z => ({ side: "right", x: W - 2 - L, z }))
-        ];
-
-        const totalCandidates = candidates.reduce((sum, arr) => sum + arr.length, 0);
-
-        let crateCount = 3 + Math.floor(k / 2);
-        crateCount = Math.min(Math.max(1, crateCount), totalCandidates);
-
-        const chosen = [];
-        const idx = [0, 0, 0, 0];
-
-        while (chosen.length < crateCount) {
-          let added = false;
-
-          for (let side = 0; side < 4; side++) {
-            if (chosen.length >= crateCount) break;
-
-            if (idx[side] < candidates[side].length) {
-              chosen.push(candidates[side][idx[side]++]);
-              added = true;
-            }
-          }
-
-          if (!added) break;
+        for (let attempt = 0; attempt < 60 && !grid; attempt++) {
+          const rng = mulberry32(seed + Math.imul(attempt + 1, 40503));
+          grid = tryGenerateLevel(rng, difficulty);
         }
 
-        const grid = Array.from({ length: H }, () => Array(W).fill("#"));
-
-        // Central playable room.
-        for (let z = inset; z <= endZ; z++) {
-          for (let x = inset; x <= endX; x++) {
-            grid[z][x] = " ";
-          }
-        }
-
-        // Create lane cells for each crate/target pair.
-        chosen.forEach(c => {
-          if (c.side === "top") {
-            for (let z = 1; z <= 1 + L; z++) {
-              grid[z][c.x] = " ";
-            }
-          } else if (c.side === "bottom") {
-            for (let z = H - 2 - L; z <= H - 2; z++) {
-              grid[z][c.x] = " ";
-            }
-          } else if (c.side === "left") {
-            for (let x = 1; x <= 1 + L; x++) {
-              grid[c.z][x] = " ";
-            }
-          } else if (c.side === "right") {
-            for (let x = W - 2 - L; x <= W - 2; x++) {
-              grid[c.z][x] = " ";
-            }
-          }
-        });
-
-        // Add interior obstacle walls for later levels.
-        // Obstacles are only placed inside the central room,
-        // while leaving the outer central ring open for movement.
-        const desiredObstacles = Math.min(24, Math.floor(k / 2));
-        let placedObstacles = 0;
-
-        for (let z = inset + 1; z <= endZ - 1 && placedObstacles < desiredObstacles; z += 2) {
-          for (let x = inset + 1; x <= endX - 1 && placedObstacles < desiredObstacles; x += 2) {
-            if ((x + z) % 2 !== 0) continue;
-            if (x === cx && z === cz) continue;
-
-            if (grid[z][x] === " ") {
-              grid[z][x] = "#";
-              placedObstacles++;
-            }
-          }
-        }
-
-        // Place targets and crates.
-        chosen.forEach(c => {
-          let target;
-
-          if (c.side === "top") {
-            target = { x: c.x, z: 1 };
-          } else if (c.side === "bottom") {
-            target = { x: c.x, z: H - 2 };
-          } else if (c.side === "left") {
-            target = { x: 1, z: c.z };
-          } else {
-            target = { x: W - 2, z: c.z };
-          }
-
-          grid[target.z][target.x] = ".";
-          grid[c.z][c.x] = "$";
-        });
-
-        grid[cz][cx] = "@";
-
-        levels.push(grid.map(row => row.join("")));
+        levels.push(grid || fallbackLevel());
       }
 
       return levels;
@@ -881,6 +1116,10 @@
       return wallSet.has(key(x, z));
     }
 
+    function outOfBounds(x, z) {
+      return x < 0 || z < 0 || x >= gridCols || z >= gridRows;
+    }
+
     function getBest(level) {
       try {
         const value = localStorage.getItem(`sokoban-phc-2026-best-${level}`);
@@ -920,14 +1159,16 @@
 
     function initThree() {
       scene = new THREE.Scene();
-      scene.fog = new THREE.Fog(0x070a12, 28, 75);
+      // Fog distances are refit per level in frameLevel().
+      scene.fog = new THREE.Fog(0x070a12, 30, 90);
 
       camera = new THREE.PerspectiveCamera(
         50,
         window.innerWidth / window.innerHeight,
         0.1,
-        200
+        300
       );
+      camera.up.set(0, 0, -1);
 
       renderer = new THREE.WebGLRenderer({
         antialias: true,
@@ -952,11 +1193,11 @@
 
       directional.shadow.mapSize.set(1024, 1024);
       directional.shadow.camera.near = 0.5;
-      directional.shadow.camera.far = 60;
-      directional.shadow.camera.left = -18;
-      directional.shadow.camera.right = 18;
-      directional.shadow.camera.top = 18;
-      directional.shadow.camera.bottom = -18;
+      directional.shadow.camera.far = 80;
+      directional.shadow.camera.left = -24;
+      directional.shadow.camera.right = 24;
+      directional.shadow.camera.top = 24;
+      directional.shadow.camera.bottom = -24;
       directional.shadow.bias = -0.0005;
 
       scene.add(directional);
@@ -978,6 +1219,10 @@
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
+
+      // Aspect changes alter the fitted camera height (e.g. rotating a
+      // phone), so reframe the board.
+      if (levelGroup) frameLevel();
     }
 
     // =====================================================================
@@ -1049,7 +1294,9 @@
         const row = data[z];
 
         for (let x = 0; x < gridCols; x++) {
-          const ch = row[x] || " ";
+          // Treat a missing trailing cell as wall so a short row can
+          // never open a hole in the boundary.
+          const ch = row[x] || "#";
 
           if (ch === "#") {
             addWall(x, z);
@@ -1187,25 +1434,43 @@
     }
 
     // =====================================================================
-    // Camera framing
+    // Camera framing — straight down, always fitting the whole board
     // =====================================================================
 
     function frameLevel() {
       const cx = (gridCols - 1) / 2;
       const cz = (gridRows - 1) / 2;
 
-      const maxDim = Math.max(gridCols, gridRows);
-      const dist = maxDim * 0.88 + 5.5;
+      // Half-extents of the board in world units, with a small margin.
+      const halfW = (gridCols - 1) / 2 + 0.6;
+      const halfH = (gridRows - 1) / 2 + 0.6;
 
-      camera.position.set(cx, dist * 0.72, cz + dist * 0.78);
+      // Height needed for the board to fit vertically AND horizontally
+      // (the horizontal FOV depends on the window aspect ratio).
+      const vFov = THREE.MathUtils.degToRad(camera.fov);
+      const hFov = 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect);
+
+      const heightVertical = halfH / Math.tan(vFov / 2);
+      const heightHorizontal = halfW / Math.tan(hFov / 2);
+      const height = Math.max(heightVertical, heightHorizontal) * 1.05;
+
+      // Perfectly overhead. The tiny -z nudge keeps lookAt() away from
+      // the degenerate straight-down case; it is invisible in practice.
+      camera.position.set(cx, height, cz - 0.05);
       camera.lookAt(cx, 0, cz);
 
       cameraBase.copy(camera.position);
       cameraLookAt.set(cx, 0, cz);
 
-      directional.position.set(cx + 7, 13, cz + 9);
+      // Keep the sun at an angle so walls and crates still throw
+      // readable shadows even with a top-down camera.
+      directional.position.set(cx + 9, 18, cz + 5);
       directional.target.position.set(cx, 0, cz);
       directional.target.updateMatrixWorld();
+
+      // Refit the fog to the camera distance so level edges never haze.
+      scene.fog.near = height * 1.4;
+      scene.fog.far = height * 3.2;
     }
 
     // =====================================================================
@@ -1284,7 +1549,7 @@
       const nx = playerPos.x + dx;
       const nz = playerPos.z + dz;
 
-      if (isWall(nx, nz)) {
+      if (outOfBounds(nx, nz) || isWall(nx, nz)) {
         return false;
       }
 
@@ -1299,7 +1564,7 @@
 
         const crateTargetKey = key(bx, bz);
 
-        if (isWall(bx, bz) || crateMap.has(crateTargetKey)) {
+        if (outOfBounds(bx, bz) || isWall(bx, bz) || crateMap.has(crateTargetKey)) {
           return false;
         }
 
@@ -1664,10 +1929,13 @@
 
       updateParticles(delta);
 
+      // The camera sits straight over the board, so the idle drift and
+      // mouse parallax are kept small enough that the goals never drift
+      // out of view while the scene still feels alive.
       camera.position.set(
-        cameraBase.x + Math.sin(t * 0.35) * 0.22 + mouseNX * 0.35,
-        cameraBase.y - mouseNY * 0.18,
-        cameraBase.z + Math.cos(t * 0.3) * 0.22
+        cameraBase.x + Math.sin(t * 0.32) * 0.09 + mouseNX * 0.2,
+        cameraBase.y - mouseNY * 0.1,
+        cameraBase.z + Math.cos(t * 0.27) * 0.09
       );
 
       camera.lookAt(cameraLookAt.x, 0, cameraLookAt.z);
