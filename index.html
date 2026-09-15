@@ -78,6 +78,7 @@
     canvas {
       position: fixed;
       inset: 0;
+      bottom: 26px; /* progress strip lives here; canvas ends above it */
       z-index: 1;
       display: block;
       touch-action: none;
@@ -91,16 +92,20 @@
       box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
     }
 
+    /* ------------------------------------------------------------------ */
+    /* Top HUD: one compact strip, vertical-first                          */
+    /* ------------------------------------------------------------------ */
+
     #topbar {
       position: fixed;
-      top: 14px;
-      left: 14px;
-      right: 14px;
+      top: 10px;
+      left: 10px;
+      right: 10px;
       z-index: 2;
       display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: stretch;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
       pointer-events: none;
     }
 
@@ -111,28 +116,30 @@
     .logo {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 11px 14px;
-      border-radius: 16px;
+      gap: 8px;
+      padding: 7px 11px;
+      border-radius: 12px;
       font-family: "Space Grotesk", sans-serif;
       font-weight: 700;
-      font-size: 16px;
+      font-size: 13px;
       letter-spacing: 0.2px;
+      white-space: nowrap;
     }
 
     .logo .orb {
-      width: 10px;
-      height: 10px;
+      width: 9px;
+      height: 9px;
       border-radius: 50%;
       background: conic-gradient(from 90deg, #67e8f9, #a78bfa, #34d399, #67e8f9);
-      box-shadow: 0 0 16px rgba(103, 232, 249, 0.75);
+      box-shadow: 0 0 12px rgba(103, 232, 249, 0.75);
+      flex: none;
     }
 
-    .badge {
-      margin-left: 2px;
-      padding: 3px 8px;
+    .logo .badge {
+      display: none;
+      padding: 2px 7px;
       border-radius: 999px;
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 800;
       letter-spacing: 0.9px;
       color: #dbeafe;
@@ -140,33 +147,90 @@
       border: 1px solid rgba(255, 255, 255, 0.16);
     }
 
-    .progress {
-      flex: 1;
-      min-width: 250px;
-      padding: 11px 14px;
-      border-radius: 16px;
+    @media (min-width: 600px) {
+      .logo .badge {
+        display: inline-block;
+      }
     }
 
-    .progress-top {
+    /* Tiny M / B / Best cluster. */
+
+    #hud-stats {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 13px;
-      color: #b8c4d4;
-      margin-bottom: 8px;
+      gap: 6px;
+      padding: 5px;
+      border-radius: 12px;
     }
 
-    .progress-top strong {
-      font-size: 14px;
+    .stat {
+      min-width: 54px;
+      padding: 4px 8px 5px;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 1px;
+    }
+
+    .stat span {
+      font-size: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #93a1b5;
+      line-height: 1;
+    }
+
+    .stat strong {
+      font-size: 12px;
       color: white;
       font-weight: 800;
+      line-height: 1.15;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Bottom progress strip (sits in the canvas inset, never overlaps)    */
+    /* ------------------------------------------------------------------ */
+
+    #progress-dock {
+      position: fixed;
+      left: 10px;
+      right: 10px;
+      bottom: 0;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px 9px;
+      pointer-events: none;
+    }
+
+    #level-info {
+      flex: none;
+      font-family: "Space Grotesk", sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      color: #b8c4d4;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #level-info strong {
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 700;
+      margin-right: 3px;
     }
 
     .bar {
-      height: 8px;
+      flex: 1;
+      height: 6px;
       border-radius: 999px;
       overflow: hidden;
       background: rgba(255, 255, 255, 0.09);
+      border: 1px solid rgba(255, 255, 255, 0.06);
     }
 
     #progress-fill {
@@ -175,130 +239,105 @@
       border-radius: 999px;
       background: linear-gradient(90deg, #22d3ee, #a78bfa, #34d399);
       transition: width 0.35s ease;
-      box-shadow: 0 0 18px rgba(34, 211, 238, 0.35);
+      box-shadow: 0 0 14px rgba(34, 211, 238, 0.35);
     }
 
-    .stats {
-      display: flex;
-      gap: 8px;
-      padding: 8px;
-      border-radius: 16px;
-    }
+    /* ------------------------------------------------------------------ */
+    /* First-move hint                                                     */
+    /* ------------------------------------------------------------------ */
 
-    .stat {
-      min-width: 86px;
-      padding: 9px 11px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 3px;
-    }
-
-    .stat span {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: #93a1b5;
-    }
-
-    .stat strong {
-      font-size: 16px;
-      color: white;
-      font-weight: 800;
-    }
-
-    #controls {
+    #hint {
       position: fixed;
-      left: 14px;
-      bottom: 14px;
+      left: 50%;
+      top: 58%;
       z-index: 2;
-      padding: 10px 12px;
-      border-radius: 14px;
+      transform: translate(-50%, -50%);
       display: flex;
-      flex-wrap: wrap;
       align-items: center;
-      gap: 14px;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 999px;
       font-size: 13px;
-      color: #b8c4d4;
-    }
-
-    .key {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 22px;
-      height: 22px;
-      margin-right: 3px;
-      padding: 0 6px;
-      border-radius: 6px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      color: white;
-      font-size: 11px;
       font-weight: 700;
-    }
-
-    #dpad {
-      position: fixed;
-      right: 16px;
-      bottom: 16px;
-      z-index: 2;
-      display: grid;
-      grid-template-columns: repeat(3, 54px);
-      grid-template-rows: repeat(3, 54px);
-      gap: 8px;
-    }
-
-    #dpad button {
-      border-radius: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05));
       color: #eaf2ff;
-      font-size: 22px;
-      cursor: pointer;
-      box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
-      transition: transform 0.1s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
-      touch-action: none;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease, transform 0.35s ease;
     }
 
-    #dpad button:hover {
-      transform: translateY(-1px);
-      border-color: rgba(34, 211, 238, 0.55);
-      box-shadow: 0 12px 26px rgba(34, 211, 238, 0.16);
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.07));
+    #hint.show {
+      opacity: 1;
+      animation: hintBob 2.2s ease-in-out infinite;
     }
 
-    #dpad button:active {
-      transform: scale(0.94);
+    #hint .chevrons {
+      display: flex;
+      gap: 3px;
+      flex: none;
     }
 
-    #dpad .up {
-      grid-column: 2;
-      grid-row: 1;
+    #hint .chevrons i {
+      width: 7px;
+      height: 7px;
+      border-right: 2px solid #67e8f9;
+      border-bottom: 2px solid #67e8f9;
+      transform: rotate(-45deg);
+      border-radius: 1px;
+      animation: chev 1.4s ease-in-out infinite;
     }
 
-    #dpad .left {
-      grid-column: 1;
-      grid-row: 2;
+    #hint .chevrons i:nth-child(2) {
+      animation-delay: 0.15s;
+      opacity: 0.7;
     }
 
-    #dpad .right {
-      grid-column: 3;
-      grid-row: 2;
+    #hint .chevrons i:nth-child(3) {
+      animation-delay: 0.3s;
+      opacity: 0.45;
     }
 
-    #dpad .down {
-      grid-column: 2;
-      grid-row: 3;
+    @keyframes chev {
+      0%, 100% {
+        transform: rotate(-45deg) translate(0, 0);
+      }
+      50% {
+        transform: rotate(-45deg) translate(2px, -2px);
+      }
     }
+
+    @keyframes hintBob {
+      0%, 100% {
+        transform: translate(-50%, -50%);
+      }
+      50% {
+        transform: translate(-50%, calc(-50% - 5px));
+      }
+    }
+
+    #hint small {
+      display: block;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      color: #9fb0c6;
+    }
+
+    @media (max-height: 480px) {
+      #hint {
+        top: 70%;
+        font-size: 12px;
+        padding: 8px 12px;
+      }
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* Toast, flash, overlay (unchanged)                                   */
+    /* ------------------------------------------------------------------ */
 
     #toast {
       position: fixed;
       left: 50%;
-      bottom: 22px;
+      bottom: 38px;
       transform: translateX(-50%) translateY(8px);
       z-index: 2;
       padding: 9px 14px;
@@ -457,28 +496,6 @@
     .btn.primary:hover {
       box-shadow: 0 16px 32px rgba(6, 182, 212, 0.3);
     }
-
-    @media (max-width: 900px) {
-      .progress {
-        order: 3;
-        flex: 1 1 100%;
-      }
-    }
-
-    @media (max-width: 640px) {
-      #controls {
-        display: none;
-      }
-
-      #dpad {
-        grid-template-columns: repeat(3, 48px);
-        grid-template-rows: repeat(3, 48px);
-      }
-
-      #dpad button {
-        font-size: 20px;
-      }
-    }
   </style>
 </head>
 
@@ -492,17 +509,7 @@
       <span class="badge">PHC 2026</span>
     </div>
 
-    <div class="progress glass">
-      <div class="progress-top">
-        <span>Progress</span>
-        <strong id="level-info">1/50</strong>
-      </div>
-      <div class="bar">
-        <div id="progress-fill"></div>
-      </div>
-    </div>
-
-    <div class="stats glass">
+    <div id="hud-stats" class="glass">
       <div class="stat">
         <span>Moves</span>
         <strong id="status-moves">0</strong>
@@ -518,23 +525,19 @@
     </div>
   </header>
 
-  <div id="controls" class="glass">
+  <div id="hint" class="glass" aria-hidden="true">
+    <span class="chevrons"><i></i><i></i><i></i></span>
     <span>
-      <span class="key">W</span>
-      <span class="key">A</span>
-      <span class="key">S</span>
-      <span class="key">D</span>
+      Swipe to move the cube
+      <small>or W A S D / arrows on desktop</small>
     </span>
-    <span>Swipe / D-Pad</span>
-    <span><span class="key">R</span> Restart</span>
-    <span><span class="key">[</span><span class="key">]</span> Level</span>
   </div>
 
-  <div id="dpad" aria-label="Movement pad">
-    <button class="up" data-dir="0,-1" aria-label="Move up">↑</button>
-    <button class="left" data-dir="-1,0" aria-label="Move left">←</button>
-    <button class="right" data-dir="1,0" aria-label="Move right">→</button>
-    <button class="down" data-dir="0,1" aria-label="Move down">↓</button>
+  <div id="progress-dock">
+    <span id="level-info"><strong>1</strong>/100</span>
+    <div class="bar">
+      <div id="progress-fill"></div>
+    </div>
   </div>
 
   <div id="toast" class="glass"></div>
@@ -597,6 +600,11 @@
     // the same puzzle on every machine (best scores stay comparable).
     // Want a fresh puzzle on every page load instead? Change LAYOUT_SEED
     // to (Math.random() * 0xffffffff) | 0.
+    //
+    // Difficulty t runs 0 -> 1 across the generated set, so the last 25
+    // levels (1/2 of the generated range) draw the largest boards, the
+    // most crates, the longest push distances and the densest bays —
+    // the hardest stretch of the game.
     // =====================================================================
 
     const BASE_LEVELS = [
@@ -780,8 +788,15 @@
 
       // ---- Crates: one private straight push lane each ---------------
 
-      const crateCount = clamp(2 + Math.round(t * 5) + (rng() < 0.35 ? 1 : 0), 2, 8);
-      const maxDist = clamp(2 + Math.round(t * 4) + randInt(rng, 0, 2), 2, 7);
+      // The last quarter of the difficulty ramp gets one extra lane per
+      // board so levels 75-100 carry the heaviest crate counts.
+      const extraCrate = t > 0.75 && rng() < 0.5 ? 1 : 0;
+      const crateCount = clamp(
+        2 + Math.round(t * 6) + extraCrate + (rng() < 0.3 ? 1 : 0),
+        2,
+        9
+      );
+      const maxDist = clamp(2 + Math.round(t * 5) + randInt(rng, 0, 2), 2, 8);
 
       // Dock candidates: floor cells that touch a wall, with the push
       // direction pointing into that wall.
@@ -842,7 +857,7 @@
 
       // ---- Interior pillars / blocks (kept off the lanes) ------------
 
-      const obstacleCount = clamp(1 + Math.round(t * 6), 1, 9);
+      const obstacleCount = clamp(1 + Math.round(t * 7), 1, 10);
       const shapes = [[1, 1], [2, 1], [1, 2], [2, 2], [3, 1], [1, 3]];
 
       for (let i = 0; i < obstacleCount; i++) {
@@ -1002,7 +1017,8 @@
       return levels;
     }
 
-    const LEVELS = BASE_LEVELS.concat(generateNewLevels(45));
+    // 5 hand-written + 95 generated = 100 levels.
+    const LEVELS = BASE_LEVELS.concat(generateNewLevels(95));
 
     // =====================================================================
     // DOM references
@@ -1026,6 +1042,7 @@
 
     const toastEl = document.getElementById("toast");
     const flashEl = document.getElementById("flash");
+    const hintEl = document.getElementById("hint");
 
     // =====================================================================
     // Movement definitions
@@ -1080,6 +1097,7 @@
 
     let winTimeout = null;
     let toastTimer = null;
+    let hintTimer = null;
 
     let mouseNX = 0;
     let mouseNY = 0;
@@ -1168,6 +1186,11 @@
         0.1,
         300
       );
+
+      // "Screen up" is world -z (the direction W moves). The default up
+      // vector (0,1,0) is parallel to the top-down view direction, so
+      // lookAt() hits its gimbal-lock case and the camera rolls/flips
+      // as the drift & mouse parallax pass through that axis.
       camera.up.set(0, 0, -1);
 
       renderer = new THREE.WebGLRenderer({
@@ -1326,6 +1349,13 @@
       updateHUD();
 
       showToast(`Level ${levelIndex + 1} Loaded`);
+
+      // Re-arm the first-move hint; it fades in shortly after load.
+      clearTimeout(hintTimer);
+      hintEl.classList.remove("show");
+      hintTimer = setTimeout(() => {
+        hintEl.classList.add("show");
+      }, 650);
     }
 
     // =====================================================================
@@ -1478,7 +1508,7 @@
     // =====================================================================
 
     function updateHUD() {
-      levelInfo.textContent = `${levelIndex + 1}/${LEVELS.length}`;
+      levelInfo.innerHTML = `<strong>${levelIndex + 1}</strong>/${LEVELS.length}`;
 
       const progress = ((levelIndex + 1) / LEVELS.length) * 100;
       progressFill.style.width = `${progress}%`;
@@ -1590,6 +1620,10 @@
       updateCrateHighlights();
       updateHUD();
 
+      // First real move committed (from any input source): drop the hint.
+      clearTimeout(hintTimer);
+      hintEl.classList.remove("show");
+
       return true;
     }
 
@@ -1616,10 +1650,12 @@
       spawnExplosion();
       flashNow();
 
+      hintEl.classList.remove("show");
+
       const gen = levelGeneration;
       const isLastLevel = levelIndex === LEVELS.length - 1;
 
-      const title = isLastLevel ? "All 50 Levels Complete!" : "Level Complete!";
+      const title = isLastLevel ? "All 100 Levels Complete!" : "Level Complete!";
       const sub = isLastLevel
         ? "Perfect pushing. The warehouse is cleared."
         : `Solved level ${levelIndex + 1} in ${moves} moves.`;
@@ -1854,16 +1890,6 @@
 
       renderer.domElement.addEventListener("contextmenu", e => {
         e.preventDefault();
-      });
-
-      document.querySelectorAll("#dpad button").forEach(btn => {
-        const [dx, dz] = btn.dataset.dir.split(",").map(Number);
-
-        btn.addEventListener("pointerdown", e => {
-          e.preventDefault();
-          btn.blur();
-          tryMove(dx, dz);
-        });
       });
 
       btnRestart.addEventListener("click", () => {
